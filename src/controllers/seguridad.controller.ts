@@ -1,7 +1,7 @@
 // Uncomment these imports to begin using these cool features!
 
 import {getModelSchemaRef, HttpErrors, post, Request, requestBody, response, RestBindings} from '@loopback/rest';
-import {ActualizarPerfil, BuscarCelular, CambiarClave, CerrarSesion, ClaveUsuario, CrearUsuario, Credenciales, EstadoUsuario, Login, RegistrarDuenio, TokenModel, Usuario} from '../models';
+import {ActualizarPerfil, BuscarCelular, BuscarIdUsuario, CambiarClave, CerrarSesion, ClaveUsuario, CrearUsuario, Credenciales, EstadoUsuario, Login, RegistrarDuenio, TokenModel, Usuario} from '../models';
 import {repository} from '@loopback/repository';
 import {inject, service} from '@loopback/core';
 import {LoginRepository, UsuarioRepository} from '../repositories';
@@ -116,6 +116,56 @@ export class SeguridadController {
       return {
         "CODIGO": 500,
         "MENSAJE": "Error al buscar el usuario",
+        "DATOS": null
+      };
+    }
+  }
+
+
+
+  // EL CELULAR DE UNA CUENTA (FASE 5D: EL RESUMEN DIARIO POR WHATSAPP). SOLO PARA ms-logica (x-clave-servicio); NO DEVUELVE NADA MAS
+  @post('/obtener-celular-servicio')
+  @response(200, {
+    description: 'celular de un usuario para el resumen por whatsapp',
+  })
+  async obtenerCelularServicio(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(BuscarIdUsuario),
+        },
+      },
+    })
+    data: BuscarIdUsuario,
+  ): Promise<object> {
+    this.seguridadService.validarClaveServicio(this.request);
+    try {
+      let usuario = await this.usuarioRepository.findOne({where: {id_usuario: data.id_usuario}, fields: {id_usuario: true, celular: true, aceptado: true}});
+      if (!usuario) {
+        return {
+          "CODIGO": 404,
+          "MENSAJE": "No hay ninguna cuenta con ese id",
+          "DATOS": null
+        };
+      }
+      if (usuario.aceptado === false) {
+        return {
+          "CODIGO": 400,
+          "MENSAJE": "La cuenta está desactivada",
+          "DATOS": null
+        };
+      }
+      return {
+        "CODIGO": 200,
+        "MENSAJE": "Operación exitosa",
+        "DATOS": {
+          celular: usuario.celular,
+        }
+      };
+    } catch (err) {
+      return {
+        "CODIGO": 500,
+        "MENSAJE": "Error al buscar el celular",
         "DATOS": null
       };
     }
