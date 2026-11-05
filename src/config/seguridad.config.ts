@@ -1,6 +1,11 @@
 export namespace ConfiguracionSeguridad {
   //-------------------------jwt -------------------------------------
   export const claveJWT = process.env.CLAVE_JWT;
+  //SOLO LA DEMO (demoganadera.ejaniot.com): ENTRADA RAPIDA SIN CLAVE A TRES CUENTAS DE EJEMPLO. EN CUALQUIER OTRO SITIO QUEDA APAGADA
+  //DEMO_ENTRADA=SI Y DEMO_CELULARES="DUENIO:3100000001,VAQUERO:3100000002,VETERINARIO:3100000003"
+  export const demoEntrada = process.env.DEMO_ENTRADA === 'SI';
+  export const demoCelulares: Record<string, string> = Object.fromEntries(
+    (process.env.DEMO_CELULARES ?? '').split(',').map(p => p.split(':').map(x => x.trim())).filter(p => p.length === 2 && p[0] && p[1]));
   //-------------------------menus -------------------------------------
   //TENER EN CUENTA QUE TOCA INSERTAR LOS MENUS EN LA BASE DE DATOS (db/SEGURIDAD/DML_SEGURIDAD_GANADERO.SQL)
   //LOS IDS DEBEN COINCIDIR CON ConfiguracionSeguridad DE ms-logica-ganadero

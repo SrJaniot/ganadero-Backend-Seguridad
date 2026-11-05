@@ -15,3 +15,4 @@ export * from './registrar-duenio.model';
 export * from './buscar-celular.model';
 export * from './actualizar-perfil.model';
 export * from './buscar-id-usuario.model';
+export * from './entrar-demo.model';

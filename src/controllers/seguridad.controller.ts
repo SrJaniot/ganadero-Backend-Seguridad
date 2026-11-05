@@ -1,7 +1,7 @@
 // Uncomment these imports to begin using these cool features!
 
-import {getModelSchemaRef, HttpErrors, post, Request, requestBody, response, RestBindings} from '@loopback/rest';
-import {ActualizarPerfil, BuscarCelular, BuscarIdUsuario, CambiarClave, CerrarSesion, ClaveUsuario, CrearUsuario, Credenciales, EstadoUsuario, Login, RegistrarDuenio, TokenModel, Usuario} from '../models';
+import {get, getModelSchemaRef, HttpErrors, post, Request, requestBody, response, RestBindings} from '@loopback/rest';
+import {ActualizarPerfil, BuscarCelular, BuscarIdUsuario, EntrarDemo, CambiarClave, CerrarSesion, ClaveUsuario, CrearUsuario, Credenciales, EstadoUsuario, Login, RegistrarDuenio, TokenModel, Usuario} from '../models';
 import {repository} from '@loopback/repository';
 import {inject, service} from '@loopback/core';
 import {LoginRepository, UsuarioRepository} from '../repositories';
@@ -410,6 +410,74 @@ export class SeguridadController {
         "DATOS": null
       }
     }
+
+
+
+
+  // ¿ESTE SITIO ES LA DEMO? (LA PANTALLA DE INGRESO MUESTRA LOS BOTONES DE ENTRADA RAPIDA SOLO SI DICE QUE SI)
+  @get('/demo-activa')
+  @response(200, {
+    description: 'Dice si la entrada rápida de la demo está prendida',
+  })
+  async demoActiva(): Promise<object> {
+    return {"CODIGO": 200, "MENSAJE": ConfiguracionSeguridad.demoEntrada ? 'Demo' : 'No es la demo', "DATOS": {activa: ConfiguracionSeguridad.demoEntrada}};
+  }
+
+
+
+  // ENTRADA RAPIDA A LA DEMO (demoganadera.ejaniot.com): DA LA SESION DE UNA DE LAS TRES CUENTAS DE EJEMPLO SIN PEDIR CLAVE
+  // SOLO SI EL .env DICE DEMO_ENTRADA=SI (EN EL SITIO REAL Y EN EL PC RESPONDE 404). LA RESIEMBRA NOCTURNA DEJA LAS CUENTAS COMO NUEVAS
+  @post('/entrar-demo')
+  @response(200, {
+    description: 'Entrada rápida a la demo',
+  })
+  async entrarDemo(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(EntrarDemo),
+        },
+      },
+    })
+    data: EntrarDemo,
+  ): Promise<object> {
+    if (!ConfiguracionSeguridad.demoEntrada) {
+      return {"CODIGO": 404, "MENSAJE": "La entrada rápida solo existe en la demo", "DATOS": null};
+    }
+    try {
+      let celular = ConfiguracionSeguridad.demoCelulares[data.rol];
+      let usuario = celular ? await this.seguridadService.buscarPorCelular(celular) : null;
+      if (!usuario || usuario.aceptado === false) {
+        return {"CODIGO": 404, "MENSAJE": "La cuenta de ejemplo no está lista: la demo se vuelve a sembrar en la madrugada", "DATOS": null};
+      }
+      let token = this.seguridadService.CrearToken(usuario);
+      let menu = await this.seguridadService.ConsultarPermisosDeMenuPorUsuario(usuario.rolid);
+      let login: Login = new Login();
+      login.usuarioid = usuario.id_usuario!;
+      login.codigo_2fa = this.seguridadService.crearTextoAleatoria(5);
+      login.estado_codigo2fa = true;
+      login.token = token;
+      login.estado_token = true;
+      await this.loginRepository.create(login);
+      return {
+        "CODIGO": 200,
+        "MENSAJE": "Operación exitosa",
+        "DATOS": {
+          usuario: {
+            id_usuario: usuario.id_usuario,
+            nombre: usuario.nombre,
+            celular: usuario.celular,
+            correo: usuario.correo ?? null,
+            rolid: usuario.rolid,
+          },
+          token,
+          menu: menu
+        }
+      };
+    } catch (err) {
+      return {"CODIGO": 500, "MENSAJE": "Error al entrar a la demo", "DATOS": null};
+    }
+  }
 
 
 
